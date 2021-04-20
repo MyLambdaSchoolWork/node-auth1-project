@@ -6,8 +6,20 @@
     "message": "You shall not pass!"
   }
 */
-function restricted() {
 
+const { findBy: findUsersBy } = require('../users/users-model.js')
+
+module.exports = {
+  restricted,
+  checkUsernameFree,
+  checkUsernameExists,
+  checkPasswordLength
+}
+
+function restricted(req, res, next) {
+  req.session.user
+    ? next()
+    : next({ message: 'You shall not pass!', status: 401 })
 }
 
 /*
@@ -18,8 +30,11 @@ function restricted() {
     "message": "Username taken"
   }
 */
-function checkUsernameFree() {
-
+async function checkUsernameFree(req, res, next) {
+  const users = await findUsersBy({ username: req.body.username })
+  users.length === 0
+    ? next()
+    : next({ status: 422, message: 'Username taken' })
 }
 
 /*
@@ -30,8 +45,14 @@ function checkUsernameFree() {
     "message": "Invalid credentials"
   }
 */
-function checkUsernameExists() {
-
+async function checkUsernameExists(req, res, next) {
+  const [user] = await findUsersBy({ username: req.body.username })
+  if(user){
+    req.user = user
+    next()
+  } else {
+    next({ status: 401, message: 'Invalid credentials' })
+  }
 }
 
 /*
@@ -42,8 +63,10 @@ function checkUsernameExists() {
     "message": "Password must be longer than 3 chars"
   }
 */
-function checkPasswordLength() {
-
+function checkPasswordLength(req, res, next) {
+  typeof(req.body.password) === 'string' && req.body.password.length > 3
+    ? next()
+    : next({ status: 422, message: 'Password must be longer than 3 chars' })
 }
 
 // Don't forget to add these to the `exports` object so they can be required in other modules
